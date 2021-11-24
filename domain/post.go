@@ -10,7 +10,7 @@ type Post struct {
 	Title  string    `json:"title" redis:"title"`
 	Author string    `json:"author" redis:"author"`
 	Votes  int       `json:"votes" redis:"votes"`
-	Time   time.Time `json:"time" redis:"time"`
+	Time   time.Time `json:"time"`
 }
 
 type PostQueryParams struct {
