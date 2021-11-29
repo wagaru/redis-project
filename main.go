@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 
 	"github.com/wagaru/redis-project/delivery"
 	"github.com/wagaru/redis-project/repository"
@@ -20,7 +21,8 @@ func main() {
 	}
 
 	_usecase := usecase.NewUsecase(redisRepo)
-	_delivery := delivery.NewHttpDelivery(_usecase)
+	mux := http.NewServeMux()
+	_delivery := delivery.NewHttpDelivery(mux, _usecase)
 
 	err = _delivery.Run(":9999")
 	if err != nil {

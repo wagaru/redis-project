@@ -5,24 +5,24 @@ import (
 	"net/http"
 
 	"github.com/gorilla/schema"
-	"github.com/wagaru/redis-project/domain"
 	"github.com/wagaru/redis-project/usecase"
 )
 
 var decoder = schema.NewDecoder()
 
 type delivery struct {
+	mux     *http.ServeMux
 	usecase usecase.Usecase
 }
 
 type httpDelivery interface {
 	Run(string) error
+	buildRoute()
 }
 
-var LoginUser = make(map[string]*domain.User)
-
-func NewHttpDelivery(usecase usecase.Usecase) httpDelivery {
+func NewHttpDelivery(mux *http.ServeMux, usecase usecase.Usecase) httpDelivery {
 	return &delivery{
+		mux:     mux,
 		usecase: usecase,
 	}
 }
@@ -37,13 +37,12 @@ func FailureResponse(w http.ResponseWriter, err error) {
 }
 
 func (d *delivery) Run(port string) error {
-	mux := http.NewServeMux()
-	d.buildRoute(mux)
-	return http.ListenAndServe(port, mux)
+	d.buildRoute()
+	return http.ListenAndServe(port, d.mux)
 }
 
-func (d *delivery) buildRoute(mux *http.ServeMux) {
-	mux.HandleFunc("/register", d.routeRegister)
-	mux.HandleFunc("/users", d.routeUsers)
-	mux.HandleFunc("/posts", d.routePosts)
+func (d *delivery) buildRoute() {
+	d.mux.HandleFunc("/register", d.routeRegister)
+	d.mux.HandleFunc("/users", d.routeUsers)
+	d.mux.HandleFunc("/posts", d.routePosts)
 }

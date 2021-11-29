@@ -24,6 +24,10 @@ func (d *delivery) registerUser(w http.ResponseWriter, r *http.Request) {
 		FailureResponse(w, err)
 		return
 	}
+	if r.FormValue("name") == "" || r.FormValue("password") == "" {
+		FailureResponse(w, errors.New("invalid arguments"))
+		return
+	}
 	user := &domain.User{
 		Name:     r.Form.Get("name"),
 		Password: r.Form.Get("password"),
