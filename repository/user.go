@@ -3,10 +3,11 @@ package repository
 import (
 	"context"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/wagaru/redis-project/domain"
 )
 
-func (r *redisRepo) StoreUser(ctx context.Context, user *domain.User) error {
+func (r *RedisRepo) StoreUser(ctx context.Context, user *domain.User) error {
 	err := r.client.SAdd(ctx, "users:", user.ID).Err()
 	if err != nil {
 		return err
@@ -22,25 +23,29 @@ func (r *redisRepo) StoreUser(ctx context.Context, user *domain.User) error {
 	}).Err()
 }
 
-func (r *redisRepo) FetchUsers(ctx context.Context) (users []*domain.User, err error) {
+func (r *RedisRepo) FetchUsers(ctx context.Context) (users []*domain.User, err error) {
 	ids, err := r.client.SMembers(ctx, "users:").Result()
+	if err == redis.Nil {
+		return []*domain.User{}, nil
+	}
 	if err != nil {
 		return
 	}
 	for _, id := range ids {
-		user, err := r.client.HGetAll(ctx, "user:"+id).Result()
-		if err != nil {
+		res := r.client.HGetAll(ctx, "user:"+id)
+		if res.Err() != nil {
 			continue
 		}
-		users = append(users, &domain.User{
-			Name:  user["name"],
-			Token: user["token"],
-		})
+		user := &domain.User{}
+		if err := res.Scan(user); err != nil {
+			continue
+		}
+		users = append(users, user)
 	}
 	return
 }
 
-func (r *redisRepo) FetchUserByToken(ctx context.Context, token string) (user *domain.User, err error) {
+func (r *RedisRepo) FetchUserByToken(ctx context.Context, token string) (user *domain.User, err error) {
 	id, err := r.client.HGet(ctx, "tokens:", token).Result()
 	if err != nil {
 		return &domain.User{}, err
@@ -48,15 +53,15 @@ func (r *redisRepo) FetchUserByToken(ctx context.Context, token string) (user *d
 	return r.FetchUserByID(ctx, id)
 }
 
-func (r *redisRepo) FetchUserByID(ctx context.Context, ID string) (user *domain.User, err error) {
-	data, err := r.client.HGetAll(ctx, "user:"+ID).Result()
-	if err != nil {
+func (r *RedisRepo) FetchUserByID(ctx context.Context, ID string) (user *domain.User, err error) {
+	res := r.client.HGetAll(ctx, "user:"+ID)
+	if res.Err() != nil {
 		return &domain.User{}, err
 	}
-	user = &domain.User{
-		ID:    ID,
-		Name:  data["name"],
-		Token: data["token"],
+	user2 := domain.User{}
+	if err := res.Scan(&user2); err != nil {
+		return &domain.User{}, err
 	}
+	user = &user2
 	return user, nil
 }

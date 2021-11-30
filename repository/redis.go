@@ -7,7 +7,7 @@ import (
 	"github.com/wagaru/redis-project/domain"
 )
 
-type redisRepo struct {
+type RedisRepo struct {
 	client *redis.Client
 }
 
@@ -26,7 +26,7 @@ func NewRedisRepo(addr string) (Repo, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &redisRepo{
+	return &RedisRepo{
 		client: client,
 	}, nil
 }

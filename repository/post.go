@@ -10,7 +10,7 @@ import (
 	"github.com/wagaru/redis-project/domain"
 )
 
-func (r *redisRepo) FetchPosts(ctx context.Context, params *domain.PostQueryParams) ([]*domain.Post, error) {
+func (r *RedisRepo) FetchPosts(ctx context.Context, params *domain.PostQueryParams) ([]*domain.Post, error) {
 	if len(params.SortBy) == 0 {
 		params.SortBy[0] = "time"
 		params.SortBy[1] = "+"
@@ -58,7 +58,7 @@ func (r *redisRepo) FetchPosts(ctx context.Context, params *domain.PostQueryPara
 	return posts, nil
 }
 
-func (r *redisRepo) StorePost(ctx context.Context, post *domain.Post) error {
+func (r *RedisRepo) StorePost(ctx context.Context, post *domain.Post) error {
 	now := time.Now()
 	nowms := float64(now.UnixNano() / int64(time.Millisecond))
 	err := r.client.HSet(ctx, "post:"+post.ID, map[string]interface{}{
