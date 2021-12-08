@@ -9,6 +9,25 @@ import (
 	"github.com/wagaru/redis-project/domain"
 )
 
+type UserRepo interface {
+	domain.UserRepository
+}
+
+func NewRedisUserRepo(addr string) (UserRepo, error) {
+	client := redis.NewClient(&redis.Options{
+		Addr:     addr,
+		Password: "",
+		DB:       0,
+	})
+	_, err := client.Ping(context.Background()).Result()
+	if err != nil {
+		return nil, err
+	}
+	return &RedisRepo{
+		client: client,
+	}, nil
+}
+
 func (r *RedisRepo) StoreUser(ctx context.Context, user *domain.User) error {
 	if user.ID == "" {
 		res, err := r.client.Incr(ctx, "user:").Result()

@@ -11,8 +11,9 @@ import (
 var decoder = schema.NewDecoder()
 
 type delivery struct {
-	mux     *http.ServeMux
-	usecase usecase.Usecase
+	mux         *http.ServeMux
+	userusecase usecase.UserUsecase
+	postusecase usecase.PostUsecase
 }
 
 type httpDelivery interface {
@@ -20,10 +21,11 @@ type httpDelivery interface {
 	buildRoute()
 }
 
-func NewHttpDelivery(mux *http.ServeMux, usecase usecase.Usecase) httpDelivery {
+func NewHttpDelivery(mux *http.ServeMux, userusecase usecase.UserUsecase, postusecase usecase.PostUsecase) httpDelivery {
 	return &delivery{
-		mux:     mux,
-		usecase: usecase,
+		mux:         mux,
+		userusecase: userusecase,
+		postusecase: postusecase,
 	}
 }
 

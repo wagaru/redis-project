@@ -32,7 +32,7 @@ func (d *delivery) registerUser(w http.ResponseWriter, r *http.Request) {
 		Name:     r.Form.Get("name"),
 		Password: r.Form.Get("password"),
 	}
-	err = d.usecase.StoreUser(context.Background(), user)
+	err = d.userusecase.StoreUser(context.Background(), user)
 	if err != nil {
 		FailureResponse(w, err)
 		return

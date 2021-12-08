@@ -17,7 +17,7 @@ func (d *delivery) routeUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (d *delivery) getUsers(w http.ResponseWriter, r *http.Request) {
-	users, err := d.usecase.FetchUsers(context.Background())
+	users, err := d.userusecase.FetchUsers(context.Background())
 	if err != nil {
 		FailureResponse(w, err)
 		return

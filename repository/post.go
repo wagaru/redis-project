@@ -10,6 +10,25 @@ import (
 	"github.com/wagaru/redis-project/domain"
 )
 
+type PostRepo interface {
+	domain.PostRepository
+}
+
+func NewRedisPostRepo(addr string) (PostRepo, error) {
+	client := redis.NewClient(&redis.Options{
+		Addr:     addr,
+		Password: "",
+		DB:       0,
+	})
+	_, err := client.Ping(context.Background()).Result()
+	if err != nil {
+		return nil, err
+	}
+	return &RedisRepo{
+		client: client,
+	}, nil
+}
+
 func (r *RedisRepo) FetchPosts(ctx context.Context, params *domain.PostQueryParams) ([]*domain.Post, error) {
 	if len(params.SortBy) == 0 {
 		params.SortBy[0] = "time"

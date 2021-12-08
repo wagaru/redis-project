@@ -14,15 +14,22 @@ func main() {
 	log.Println("start...")
 	defer log.Println("end...")
 
-	redisRepo, err := repository.NewRedisRepo("localhost:6379")
+	redisUserRepo, err := repository.NewRedisUserRepo("localhost:6379")
 	if err != nil {
 		fmt.Println("Connect redis failed", err)
 		return
 	}
 
-	_usecase := usecase.NewUsecase(redisRepo)
+	redisPostRepo, err := repository.NewRedisPostRepo("localhost:6379")
+	if err != nil {
+		fmt.Println("Connect redis failed", err)
+		return
+	}
+
+	userusecase := usecase.NewUserUsecase(redisUserRepo)
+	postusecase := usecase.NewPostUsecase(redisPostRepo)
 	mux := http.NewServeMux()
-	_delivery := delivery.NewHttpDelivery(mux, _usecase)
+	_delivery := delivery.NewHttpDelivery(mux, userusecase, postusecase)
 
 	err = _delivery.Run(":9999")
 	if err != nil {

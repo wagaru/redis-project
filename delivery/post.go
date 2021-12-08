@@ -27,7 +27,7 @@ func (d *delivery) getPosts(w http.ResponseWriter, r *http.Request) {
 		FailureResponse(w, err)
 		return
 	}
-	posts, err := d.usecase.FetchPosts(context.Background(), &queryParams)
+	posts, err := d.postusecase.FetchPosts(context.Background(), &queryParams)
 	if err != nil {
 		FailureResponse(w, err)
 		return
@@ -44,12 +44,12 @@ func (d *delivery) getPosts(w http.ResponseWriter, r *http.Request) {
 func (d *delivery) storePosts(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	r.ParseForm()
-	user, err := d.usecase.FetchUserByToken(ctx, r.Form.Get("token"))
+	user, err := d.userusecase.FetchUserByToken(ctx, r.Form.Get("token"))
 	if err != nil {
 		FailureResponse(w, err)
 		return
 	}
-	err = d.usecase.StorePost(ctx, &domain.Post{
+	err = d.postusecase.StorePost(ctx, &domain.Post{
 		Title: r.Form.Get("title"),
 	}, user)
 	if err != nil {

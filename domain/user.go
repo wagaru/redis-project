@@ -3,10 +3,10 @@ package domain
 import "context"
 
 type User struct {
-	ID       string `json:"-"`
-	Name     string `json:"name"`
-	Password string `json:"password"`
-	Token    string `json:"token"`
+	ID       string `json:"-" redis:"-"`
+	Name     string `json:"name" redis:"name"`
+	Password string `json:"password" redis:"password"`
+	Token    string `json:"token" redis:"token"`
 }
 
 type UserUsecase interface {
