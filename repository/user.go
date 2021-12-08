@@ -2,17 +2,26 @@ package repository
 
 import (
 	"context"
+	"strconv"
+	"strings"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/wagaru/redis-project/domain"
 )
 
 func (r *RedisRepo) StoreUser(ctx context.Context, user *domain.User) error {
-	err := r.client.SAdd(ctx, "users:", user.ID).Err()
+	if user.ID == "" {
+		res, err := r.client.Incr(ctx, "user:").Result()
+		if err != nil {
+			return err
+		}
+		user.ID = strconv.FormatInt(res, 10)
+	}
+	err := r.client.SAdd(ctx, "users:", "user:"+user.ID).Err()
 	if err != nil {
 		return err
 	}
-	err = r.client.HSet(ctx, "tokens:", user.Token, user.ID).Err()
+	err = r.client.HSet(ctx, "tokens:", user.Token, "user:"+user.ID).Err()
 	if err != nil {
 		return err
 	}
@@ -32,15 +41,19 @@ func (r *RedisRepo) FetchUsers(ctx context.Context) (users []*domain.User, err e
 		return
 	}
 	for _, id := range ids {
+		id := strings.TrimPrefix(id, "user:")
 		res := r.client.HGetAll(ctx, "user:"+id)
+		if res.Err() == redis.Nil {
+			continue
+		}
 		if res.Err() != nil {
 			continue
 		}
-		user := &domain.User{}
-		if err := res.Scan(user); err != nil {
+		var user domain.User
+		if err := res.Scan(&user); err != nil {
 			continue
 		}
-		users = append(users, user)
+		users = append(users, &user)
 	}
 	return
 }
@@ -50,6 +63,7 @@ func (r *RedisRepo) FetchUserByToken(ctx context.Context, token string) (user *d
 	if err != nil {
 		return &domain.User{}, err
 	}
+	id = strings.TrimPrefix(id, "user:")
 	return r.FetchUserByID(ctx, id)
 }
 
@@ -58,10 +72,10 @@ func (r *RedisRepo) FetchUserByID(ctx context.Context, ID string) (user *domain.
 	if res.Err() != nil {
 		return &domain.User{}, err
 	}
-	user2 := domain.User{}
-	if err := res.Scan(&user2); err != nil {
+
+	user = &domain.User{}
+	if err := res.Scan(user); err != nil {
 		return &domain.User{}, err
 	}
-	user = &user2
-	return user, nil
+	return
 }

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"strconv"
 	"testing"
 
 	"github.com/go-redis/redismock/v8"
@@ -20,14 +21,16 @@ func TestStoreUser(t *testing.T) {
 	repo, mock := generateMockRedis()
 
 	mockUser := domain.User{
-		ID:       "fakeID",
 		Token:    "fakeToken",
 		Password: "fakePassWord",
 	}
 
-	mock.ExpectSAdd("users:", mockUser.ID).SetVal(1)
-	mock.ExpectHSet("tokens:", mockUser.Token, mockUser.ID).SetVal(1)
-	mock.ExpectHSet("user:"+mockUser.ID, map[string]interface{}{
+	initUserIdInString := "1"
+	initUserId, _ := strconv.ParseInt(initUserIdInString, 10, 64)
+	mock.ExpectIncr("user:").SetVal(initUserId)
+	mock.ExpectSAdd("users:", "user:"+initUserIdInString).SetVal(1)
+	mock.ExpectHSet("tokens:", mockUser.Token, "user:"+initUserIdInString).SetVal(1)
+	mock.ExpectHSet("user:"+initUserIdInString, map[string]interface{}{
 		"name":     mockUser.Name,
 		"password": mockUser.Password,
 		"token":    mockUser.Token,

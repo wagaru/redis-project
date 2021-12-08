@@ -59,6 +59,13 @@ func (r *RedisRepo) FetchPosts(ctx context.Context, params *domain.PostQueryPara
 }
 
 func (r *RedisRepo) StorePost(ctx context.Context, post *domain.Post) error {
+	if post.ID == "" {
+		res := r.client.Incr(ctx, "posts:")
+		if res.Err() != nil {
+			return res.Err()
+		}
+		post.ID = "posts:" + res.String()
+	}
 	now := time.Now()
 	nowms := float64(now.UnixNano() / int64(time.Millisecond))
 	err := r.client.HSet(ctx, "post:"+post.ID, map[string]interface{}{
