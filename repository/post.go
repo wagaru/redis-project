@@ -11,6 +11,8 @@ import (
 	"github.com/wagaru/redis-project/domain"
 )
 
+const VOTE_SCORE = 432 * 1000
+
 type PostRepo interface {
 	domain.PostRepository
 }
@@ -31,11 +33,30 @@ func NewRedisPostRepo(addr string) (PostRepo, error) {
 }
 
 func (r *RedisRepo) VotePost(ctx context.Context, post *domain.Post, user *domain.User) error {
-	//檢查是否已過期，過期不給投
+	postTime, err := r.client.ZScore(ctx, "time:", "post:"+post.ID).Result()
+	if err != nil {
+		return err
+	}
+	if postTime < float64(time.Now().UnixMilli())-float64(time.Millisecond*1000*86400*7) {
+		return errors.New("post cannot be voted.")
+	}
 
-	//更新 score:
+	success, err := r.client.SAdd(ctx, "voted:"+post.ID, "user:"+user.ID).Result()
+	if err != nil {
+		return err
+	}
 
-	//更新 post:xx 上的　votes
+	if success == 1 {
+		err = r.client.ZIncrBy(ctx, "score:", float64(VOTE_SCORE), "post:"+post.ID).Err()
+		if err != nil {
+			return err
+		}
+		err = r.client.HIncrBy(ctx, "post:"+post.ID, "votes", 1).Err()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (r *RedisRepo) FetchPostByID(ctx context.Context, ID string) (*domain.Post, error) {
@@ -48,6 +69,26 @@ func (r *RedisRepo) FetchPostByID(ctx context.Context, ID string) (*domain.Post,
 		return nil, err
 	}
 	return &post, nil
+}
+
+func (r *RedisRepo) FetchGroupPosts(ctx context.Context, groupName string) ([]*domain.Post, error) {
+	err := r.client.ZInterStore(ctx, "score:"+groupName, &redis.ZStore{
+		Keys:      []string{"group:" + groupName, "score:"},
+		Weights:   []float64{1, 1},
+		Aggregate: "MAX",
+	}).Err()
+	if err != nil {
+		return nil, err
+	}
+	err = r.client.ExpireAt(ctx, "score:"+groupName, time.Now().Add(time.Minute)).Err()
+	if err != nil {
+		return nil, err
+	}
+	return r.FetchPosts(ctx, &domain.PostQueryParams{
+		QueryParams: domain.QueryParams{
+			SortBy: [2]string{"score:" + groupName, "+"},
+		},
+	})
 }
 
 func (r *RedisRepo) FetchPosts(ctx context.Context, params *domain.PostQueryParams) ([]*domain.Post, error) {
@@ -65,11 +106,14 @@ func (r *RedisRepo) FetchPosts(ctx context.Context, params *domain.PostQueryPara
 		setKey = "time:"
 	case "score":
 		setKey = "score:"
+	case "score:programming":
+		setKey = "score:programming"
+	case "score:dancing":
+		setKey = "score:dancing"
 	default:
 		setKey = "time:"
 	}
-	fmt.Println(setKey)
-	ids, err := r.client.ZRangeByScore(ctx, setKey, &redis.ZRangeBy{
+	ids, err := r.client.ZRevRangeByScore(ctx, setKey, &redis.ZRangeBy{
 		Min:    "-inf",
 		Max:    "+inf",
 		Offset: int64(params.Page) * int64(params.PerPage),
@@ -80,7 +124,7 @@ func (r *RedisRepo) FetchPosts(ctx context.Context, params *domain.PostQueryPara
 		return []*domain.Post{}, err
 	}
 	for _, id := range ids {
-		res := r.client.HGetAll(ctx, "post:"+id)
+		res := r.client.HGetAll(ctx, id)
 		if res.Err() != nil {
 			fmt.Println(err)
 			continue
@@ -106,14 +150,13 @@ func (r *RedisRepo) StorePost(ctx context.Context, post *domain.Post) error {
 		}
 		post.ID = strconv.FormatInt(res, 10)
 	}
-	now := time.Now()
-	nowms := float64(now.UnixNano() / int64(time.Millisecond))
+	now := time.Now().UnixMilli()
 	err := r.client.HSet(ctx, "post:"+post.ID, map[string]interface{}{
 		"id":     post.ID,
 		"title":  post.Title,
 		"author": post.Author,
 		"votes":  post.Votes,
-		"time":   nowms,
+		"time":   now,
 	}).Err()
 	if err != nil {
 		return err
@@ -123,23 +166,27 @@ func (r *RedisRepo) StorePost(ctx context.Context, post *domain.Post) error {
 	if err != nil {
 		return err
 	}
-	err = r.client.ExpireAt(ctx, votedKey, now.Add(7*24*time.Hour)).Err()
+	err = r.client.ExpireAt(ctx, votedKey, time.Now().Add(7*24*time.Hour)).Err()
 	if err != nil {
 		return err
 	}
 	err = r.client.ZAdd(ctx, "time:", &redis.Z{
-		Score:  nowms,
+		Score:  float64(now),
 		Member: "post:" + post.ID,
 	}).Err()
 	if err != nil {
 		return err
 	}
 	err = r.client.ZAdd(ctx, "score:", &redis.Z{
-		Score:  float64(432) + nowms,
+		Score:  float64(VOTE_SCORE) + float64(now),
 		Member: "post:" + post.ID,
 	}).Err()
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (r *RedisRepo) GroupPost(ctx context.Context, post *domain.Post, groupName string) error {
+	return r.client.SAdd(ctx, "group:"+groupName, "post:"+post.ID).Err()
 }

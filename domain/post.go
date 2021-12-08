@@ -10,7 +10,7 @@ type Post struct {
 	Title  string    `json:"title" redis:"title"`
 	Author string    `json:"author" redis:"author"`
 	Votes  int       `json:"votes" redis:"votes"`
-	Time   time.Time `json:"time"`
+	Time   time.Time `json:"time" redis:"-"`
 }
 
 type PostQueryParams struct {
@@ -22,8 +22,10 @@ type PostUsecase interface {
 	// GetById(ctx context.Context, id int64) (Post, error)
 	StorePost(ctx context.Context, post *Post, user *User) error
 	FetchPosts(ctx context.Context, params *PostQueryParams) ([]*Post, error)
+	FetchGroupPosts(ctx context.Context, groupName string) ([]*Post, error)
 	FetchPostByID(ctx context.Context, ID string) (*Post, error)
 	VotePost(ctx context.Context, post *Post, user *User) error
+	GroupPost(ctx context.Context, post *Post, groupName string) error
 }
 
 type PostRepository interface {
@@ -31,6 +33,8 @@ type PostRepository interface {
 	// GetById(ctx context.Context, id int64) (Post, error)
 	StorePost(ctx context.Context, post *Post) error
 	FetchPosts(ctx context.Context, params *PostQueryParams) ([]*Post, error)
+	FetchGroupPosts(ctx context.Context, groupName string) ([]*Post, error)
 	FetchPostByID(ctx context.Context, ID string) (*Post, error)
 	VotePost(ctx context.Context, post *Post, user *User) error
+	GroupPost(ctx context.Context, post *Post, groupName string) error
 }

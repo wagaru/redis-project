@@ -40,3 +40,14 @@ func (u *postusecase) VotePost(ctx context.Context, post *domain.Post, user *dom
 	}
 	return u.repo.VotePost(ctx, post, user)
 }
+
+func (u *postusecase) GroupPost(ctx context.Context, post *domain.Post, groupName string) error {
+	if groupName == "" {
+		return errors.New("invalid groupName")
+	}
+	return u.repo.GroupPost(ctx, post, groupName)
+}
+
+func (u *postusecase) FetchGroupPosts(ctx context.Context, groupName string) ([]*domain.Post, error) {
+	return u.repo.FetchGroupPosts(ctx, groupName)
+}

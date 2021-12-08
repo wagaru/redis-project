@@ -14,6 +14,52 @@ type PostRepository struct {
 	mock.Mock
 }
 
+// FetchGroupPosts provides a mock function with given fields: ctx, groupName
+func (_m *PostRepository) FetchGroupPosts(ctx context.Context, groupName string) ([]*domain.Post, error) {
+	ret := _m.Called(ctx, groupName)
+
+	var r0 []*domain.Post
+	if rf, ok := ret.Get(0).(func(context.Context, string) []*domain.Post); ok {
+		r0 = rf(ctx, groupName)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*domain.Post)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, groupName)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// FetchPostByID provides a mock function with given fields: ctx, ID
+func (_m *PostRepository) FetchPostByID(ctx context.Context, ID string) (*domain.Post, error) {
+	ret := _m.Called(ctx, ID)
+
+	var r0 *domain.Post
+	if rf, ok := ret.Get(0).(func(context.Context, string) *domain.Post); ok {
+		r0 = rf(ctx, ID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*domain.Post)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, ID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // FetchPosts provides a mock function with given fields: ctx, params
 func (_m *PostRepository) FetchPosts(ctx context.Context, params *domain.PostQueryParams) ([]*domain.Post, error) {
 	ret := _m.Called(ctx, params)
@@ -37,6 +83,20 @@ func (_m *PostRepository) FetchPosts(ctx context.Context, params *domain.PostQue
 	return r0, r1
 }
 
+// GroupPost provides a mock function with given fields: ctx, post, groupName
+func (_m *PostRepository) GroupPost(ctx context.Context, post *domain.Post, groupName string) error {
+	ret := _m.Called(ctx, post, groupName)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *domain.Post, string) error); ok {
+		r0 = rf(ctx, post, groupName)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // StorePost provides a mock function with given fields: ctx, post
 func (_m *PostRepository) StorePost(ctx context.Context, post *domain.Post) error {
 	ret := _m.Called(ctx, post)
@@ -44,6 +104,20 @@ func (_m *PostRepository) StorePost(ctx context.Context, post *domain.Post) erro
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, *domain.Post) error); ok {
 		r0 = rf(ctx, post)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// VotePost provides a mock function with given fields: ctx, post, user
+func (_m *PostRepository) VotePost(ctx context.Context, post *domain.Post, user *domain.User) error {
+	ret := _m.Called(ctx, post, user)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *domain.Post, *domain.User) error); ok {
+		r0 = rf(ctx, post, user)
 	} else {
 		r0 = ret.Error(0)
 	}

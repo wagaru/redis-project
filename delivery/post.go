@@ -27,7 +27,12 @@ func (d *delivery) getPosts(w http.ResponseWriter, r *http.Request) {
 		FailureResponse(w, err)
 		return
 	}
-	posts, err := d.postusecase.FetchPosts(context.Background(), &queryParams)
+	var posts []*domain.Post
+	if groupName := r.URL.Query().Get("groupName"); groupName != "" {
+		posts, err = d.postusecase.FetchGroupPosts(context.Background(), groupName)
+	} else {
+		posts, err = d.postusecase.FetchPosts(context.Background(), &queryParams)
+	}
 	if err != nil {
 		FailureResponse(w, err)
 		return
@@ -48,6 +53,8 @@ func (d *delivery) handlePosts(w http.ResponseWriter, r *http.Request) {
 		d.storePosts(w, r)
 	} else if method == "vote" {
 		d.votePost(w, r)
+	} else if method == "group" {
+		d.groupPost(w, r)
 	} else {
 		FailureResponse(w, errors.New("unsupported method"))
 		return
@@ -75,6 +82,7 @@ func (d *delivery) storePosts(w http.ResponseWriter, r *http.Request) {
 	}
 	err = d.postusecase.StorePost(ctx, &domain.Post{
 		Title: title,
+		Votes: 1,
 	}, user)
 	if err != nil {
 		FailureResponse(w, err)
@@ -105,10 +113,45 @@ func (d *delivery) votePost(w http.ResponseWriter, r *http.Request) {
 		FailureResponse(w, err)
 		return
 	}
-	err = d.postusecase.Vote(ctx, post, user)
+	err = d.postusecase.VotePost(ctx, post, user)
 	if err != nil {
 		FailureResponse(w, err)
 		return
 	}
 	w.Write([]byte("Success"))
+}
+
+func (d *delivery) groupPost(w http.ResponseWriter, r *http.Request) {
+	postId := r.Form.Get("postID")
+	if postId == "" {
+		FailureResponse(w, errors.New("invalid postID"))
+		return
+	}
+	token := r.Form.Get("token")
+	if token == "" {
+		FailureResponse(w, errors.New("invalid token"))
+		return
+	}
+	groupName := r.Form.Get("groupName")
+	if groupName == "" {
+		FailureResponse(w, errors.New("invalid groupName"))
+		return
+	}
+	ctx := context.Background()
+	_, err := d.userusecase.FetchUserByToken(ctx, token)
+	if err != nil {
+		FailureResponse(w, err)
+		return
+	}
+	post, err := d.postusecase.FetchPostByID(ctx, postId)
+	if err != nil {
+		FailureResponse(w, err)
+		return
+	}
+	err = d.postusecase.GroupPost(ctx, post, groupName)
+	if err != nil {
+		FailureResponse(w, err)
+		return
+	}
+	w.Write([]byte("success"))
 }
