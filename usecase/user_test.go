@@ -43,5 +43,29 @@ func TestFetchUserByToken(t *testing.T) {
 			t.Error("invalid")
 		}
 	})
+}
 
+func TestFetchUserByID(t *testing.T) {
+	repo := new(mocks.UserRepository)
+	usecase := NewUserUsecase(repo)
+
+	t.Run("Error", func(t *testing.T) {
+		_, err := usecase.FetchUserByID(context.Background(), "")
+		if err == nil {
+			t.Errorf("error")
+		}
+	})
+	t.Run("Success", func(t *testing.T) {
+		user := &domain.User{
+			ID: "fakeID",
+		}
+		repo.On("FetchUserByID", mock.Anything, user.ID).Return(user, nil)
+		res, err := usecase.FetchUserByID(context.Background(), user.ID)
+		if err != nil {
+			t.Error("error")
+		}
+		if res.ID != user.ID {
+			t.Error("invalid")
+		}
+	})
 }

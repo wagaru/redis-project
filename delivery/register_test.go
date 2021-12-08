@@ -1,54 +1,77 @@
 package delivery
 
-// import (
-// 	"encoding/json"
-// 	"net/http"
-// 	"net/http/httptest"
-// 	"net/url"
-// 	"strings"
-// 	"testing"
-// )
+import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"strings"
+	"testing"
 
-// func TestRegisterUser(t *testing.T) {
-// 	val := url.Values{}
-// 	val.Set("name", "testname")
-// 	val.Set("password", "1234")
-// 	req := httptest.NewRequest("POST", "/register", strings.NewReader(val.Encode()))
-// 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-// 	w := httptest.NewRecorder()
+	"github.com/stretchr/testify/mock"
+	"github.com/wagaru/redis-project/domain"
+	"github.com/wagaru/redis-project/domain/mocks"
+)
 
-// 	usecase := NewMockUsecase()
-// 	mux := http.NewServeMux()
-// 	delivery := NewHttpDelivery(mux, usecase)
+func TestRegisterUser(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		fakeName, fakePwd := "fakeName", "fakePwd"
+		val := url.Values{}
+		val.Set("name", fakeName)
+		val.Set("password", fakePwd)
+		req := httptest.NewRequest("POST", "/register", strings.NewReader(val.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
 
-// 	delivery.buildRoute()
+		userusecase := new(mocks.UserUsecase)
+		postusecase := new(mocks.PostUsecase)
 
-// 	mux.ServeHTTP(w, req)
+		userusecase.On("StoreUser", mock.Anything, mock.MatchedBy(
+			func(user *domain.User) bool {
+				return user.Password == fakePwd && user.Name == fakeName
+			})).Return(nil)
 
-// 	responseMap := make(map[string]interface{})
-// 	json.Unmarshal(w.Body.Bytes(), &responseMap)
+		mux := http.NewServeMux()
+		delivery := NewHttpDelivery(mux, userusecase, postusecase)
 
-// 	if _, ok := responseMap["token"]; !ok {
-// 		t.Errorf("Returen not contain token, failed.")
-// 	}
-// }
+		delivery.buildRoute()
 
-// func TestRegisterUserFailed(t *testing.T) {
-// 	val := url.Values{}
-// 	val.Set("name", "")
-// 	req := httptest.NewRequest("POST", "/register", strings.NewReader(val.Encode()))
-// 	w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
 
-// 	mux := http.NewServeMux()
-// 	usecase := NewMockUsecase()
-// 	delivery := NewHttpDelivery(mux, usecase)
+		responseMap := make(map[string]interface{})
+		json.Unmarshal(w.Body.Bytes(), &responseMap)
 
-// 	delivery.buildRoute()
-// 	mux.ServeHTTP(w, req)
-// 	responseMap := make(map[string]interface{})
-// 	json.Unmarshal(w.Body.Bytes(), &responseMap)
+		_, ok := responseMap["token"]
+		if !ok {
+			t.Errorf("Returen not contain token, failed.")
+		}
+	})
+	t.Run("failure", func(t *testing.T) {
+		fakeName, fakePwd := "", ""
 
-// 	if _, ok := responseMap["err"]; !ok {
-// 		t.Errorf("Return not contain err, failed.")
-// 	}
-// }
+		val := url.Values{}
+		val.Set("name", fakeName)
+		val.Set("password", fakePwd)
+		req := httptest.NewRequest("POST", "/register", strings.NewReader(val.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		userusecase := new(mocks.UserUsecase)
+		postusecase := new(mocks.PostUsecase)
+		mux := http.NewServeMux()
+		delivery := NewHttpDelivery(mux, userusecase, postusecase)
+
+		delivery.buildRoute()
+
+		mux.ServeHTTP(w, req)
+
+		responseMap := make(map[string]interface{})
+		json.Unmarshal(w.Body.Bytes(), &responseMap)
+
+		_, ok := responseMap["err"]
+		if !ok {
+			t.Error("Return not contain err, failed.")
+		}
+	})
+
+}
