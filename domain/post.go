@@ -6,7 +6,7 @@ import (
 )
 
 type Post struct {
-	ID     string    `json:"-" redis:"-"`
+	ID     string    `json:"-" redis:"id"`
 	Title  string    `json:"title" redis:"title"`
 	Author string    `json:"author" redis:"author"`
 	Votes  int       `json:"votes" redis:"votes"`
@@ -22,6 +22,8 @@ type PostUsecase interface {
 	// GetById(ctx context.Context, id int64) (Post, error)
 	StorePost(ctx context.Context, post *Post, user *User) error
 	FetchPosts(ctx context.Context, params *PostQueryParams) ([]*Post, error)
+	FetchPostByID(ctx context.Context, ID string) (*Post, error)
+	VotePost(ctx context.Context, post *Post, user *User) error
 }
 
 type PostRepository interface {
@@ -29,4 +31,6 @@ type PostRepository interface {
 	// GetById(ctx context.Context, id int64) (Post, error)
 	StorePost(ctx context.Context, post *Post) error
 	FetchPosts(ctx context.Context, params *PostQueryParams) ([]*Post, error)
+	FetchPostByID(ctx context.Context, ID string) (*Post, error)
+	VotePost(ctx context.Context, post *Post, user *User) error
 }

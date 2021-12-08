@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"strings"
 
@@ -45,6 +46,7 @@ func (r *RedisRepo) StoreUser(ctx context.Context, user *domain.User) error {
 		return err
 	}
 	return r.client.HSet(ctx, "user:"+user.ID, map[string]interface{}{
+		"id":       user.ID,
 		"name":     user.Name,
 		"password": user.Password,
 		"token":    user.Token,
@@ -79,8 +81,11 @@ func (r *RedisRepo) FetchUsers(ctx context.Context) (users []*domain.User, err e
 
 func (r *RedisRepo) FetchUserByToken(ctx context.Context, token string) (user *domain.User, err error) {
 	id, err := r.client.HGet(ctx, "tokens:", token).Result()
+	if err == redis.Nil {
+		return nil, errors.New("no matching user")
+	}
 	if err != nil {
-		return &domain.User{}, err
+		return nil, err
 	}
 	id = strings.TrimPrefix(id, "user:")
 	return r.FetchUserByID(ctx, id)

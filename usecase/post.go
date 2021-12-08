@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"errors"
 
 	"github.com/wagaru/redis-project/domain"
 	"github.com/wagaru/redis-project/repository"
@@ -27,4 +28,15 @@ func (u *postusecase) StorePost(ctx context.Context, post *domain.Post, user *do
 
 func (u *postusecase) FetchPosts(ctx context.Context, params *domain.PostQueryParams) ([]*domain.Post, error) {
 	return u.repo.FetchPosts(ctx, params)
+}
+
+func (u *postusecase) FetchPostByID(ctx context.Context, ID string) (*domain.Post, error) {
+	return u.repo.FetchPostByID(ctx, ID)
+}
+
+func (u *postusecase) VotePost(ctx context.Context, post *domain.Post, user *domain.User) error {
+	if post == nil || user == nil {
+		return errors.New("empty post or user is invalid")
+	}
+	return u.repo.VotePost(ctx, post, user)
 }

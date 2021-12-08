@@ -14,7 +14,7 @@ func (d *delivery) routePosts(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		d.getPosts(w, r)
 	case http.MethodPost:
-		d.storePosts(w, r)
+		d.handlePosts(w, r)
 	default:
 		FailureResponse(w, errors.New("invalid request"))
 	}
@@ -41,17 +41,71 @@ func (d *delivery) getPosts(w http.ResponseWriter, r *http.Request) {
 	w.Write(json)
 }
 
+func (d *delivery) handlePosts(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	method := r.Form.Get("method")
+	if method == "store" {
+		d.storePosts(w, r)
+	} else if method == "vote" {
+		d.votePost(w, r)
+	} else {
+		FailureResponse(w, errors.New("unsupported method"))
+		return
+	}
+}
+
 func (d *delivery) storePosts(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
-	r.ParseForm()
-	user, err := d.userusecase.FetchUserByToken(ctx, r.Form.Get("token"))
+	// r.ParseForm()
+
+	token := r.Form.Get("token")
+	if token == "" {
+		FailureResponse(w, errors.New("invalid token."))
+		return
+	}
+	title := r.Form.Get("title")
+	if title == "" {
+		FailureResponse(w, errors.New("invalid title."))
+		return
+	}
+	user, err := d.userusecase.FetchUserByToken(ctx, token)
 	if err != nil {
 		FailureResponse(w, err)
 		return
 	}
 	err = d.postusecase.StorePost(ctx, &domain.Post{
-		Title: r.Form.Get("title"),
+		Title: title,
 	}, user)
+	if err != nil {
+		FailureResponse(w, err)
+		return
+	}
+	w.Write([]byte("Success"))
+}
+
+func (d *delivery) votePost(w http.ResponseWriter, r *http.Request) {
+	postId := r.Form.Get("postID")
+	if postId == "" {
+		FailureResponse(w, errors.New("invalid postID"))
+		return
+	}
+	token := r.Form.Get("token")
+	if token == "" {
+		FailureResponse(w, errors.New("invalid token"))
+		return
+	}
+	ctx := context.Background()
+	user, err := d.userusecase.FetchUserByToken(ctx, token)
+	if err != nil {
+		FailureResponse(w, err)
+		return
+	}
+	post, err := d.postusecase.FetchPostByID(ctx, postId)
+	if err != nil {
+		FailureResponse(w, err)
+		return
+	}
+	err = d.postusecase.Vote(ctx, post, user)
 	if err != nil {
 		FailureResponse(w, err)
 		return

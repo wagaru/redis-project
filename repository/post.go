@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -27,6 +28,26 @@ func NewRedisPostRepo(addr string) (PostRepo, error) {
 	return &RedisRepo{
 		client: client,
 	}, nil
+}
+
+func (r *RedisRepo) VotePost(ctx context.Context, post *domain.Post, user *domain.User) error {
+	//檢查是否已過期，過期不給投
+
+	//更新 score:
+
+	//更新 post:xx 上的　votes
+}
+
+func (r *RedisRepo) FetchPostByID(ctx context.Context, ID string) (*domain.Post, error) {
+	res := r.client.HGetAll(ctx, "post:"+ID)
+	if res.Err() == redis.Nil {
+		return nil, errors.New("no matching post")
+	}
+	var post domain.Post
+	if err := res.Scan(&post); err != nil {
+		return nil, err
+	}
+	return &post, nil
 }
 
 func (r *RedisRepo) FetchPosts(ctx context.Context, params *domain.PostQueryParams) ([]*domain.Post, error) {
@@ -79,15 +100,16 @@ func (r *RedisRepo) FetchPosts(ctx context.Context, params *domain.PostQueryPara
 
 func (r *RedisRepo) StorePost(ctx context.Context, post *domain.Post) error {
 	if post.ID == "" {
-		res := r.client.Incr(ctx, "posts:")
-		if res.Err() != nil {
-			return res.Err()
+		res, err := r.client.Incr(ctx, "post:").Result()
+		if err != nil {
+			return err
 		}
-		post.ID = "posts:" + res.String()
+		post.ID = strconv.FormatInt(res, 10)
 	}
 	now := time.Now()
 	nowms := float64(now.UnixNano() / int64(time.Millisecond))
 	err := r.client.HSet(ctx, "post:"+post.ID, map[string]interface{}{
+		"id":     post.ID,
 		"title":  post.Title,
 		"author": post.Author,
 		"votes":  post.Votes,
@@ -101,20 +123,20 @@ func (r *RedisRepo) StorePost(ctx context.Context, post *domain.Post) error {
 	if err != nil {
 		return err
 	}
-	err = r.client.ExpireAt(ctx, votedKey, now.Add(20*24*time.Hour)).Err()
+	err = r.client.ExpireAt(ctx, votedKey, now.Add(7*24*time.Hour)).Err()
 	if err != nil {
 		return err
 	}
 	err = r.client.ZAdd(ctx, "time:", &redis.Z{
 		Score:  nowms,
-		Member: post.ID,
+		Member: "post:" + post.ID,
 	}).Err()
 	if err != nil {
 		return err
 	}
 	err = r.client.ZAdd(ctx, "score:", &redis.Z{
 		Score:  float64(432) + nowms,
-		Member: post.ID,
+		Member: "post:" + post.ID,
 	}).Err()
 	if err != nil {
 		return err
