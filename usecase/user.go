@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"math/rand"
+	"time"
 
 	"github.com/wagaru/redis-project/domain"
 	"github.com/wagaru/redis-project/repository"
@@ -26,6 +27,7 @@ func NewUserUsecase(repo repository.UserRepo) UserUsecase {
 
 func GenerateToken() string {
 	b := make([]byte, 32)
+	rand.Seed(time.Now().Unix())
 	rand.Read(b)
 	return hex.EncodeToString(b)
 }
